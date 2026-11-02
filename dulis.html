@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>대구대학교 문헌정보학과 카드뉴스</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+KR:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0f3d36;      /* 심볼 청록의 짙은 톤: 제목·진한 배경 */
+    --navy-2: #00806e;    /* 심볼 청록 */
+    --sky: #00806e;       /* 강조 글자 (심볼 청록) */
+    --mint: #71bf43;      /* 심볼 연두 */
+    --gold: #dcd421;      /* 심볼 노랑 */
+    --paper: #fafbf4;
+    --ink: #1a2622;
+    --muted: #5b6b66;
+    --line: #dfe5d6;
+    --bg: #071a17;
+    --card-size: calc(min(92vw, calc((100vh - 340px) * 1.5), 960px) * .98);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 40%, #123a33 0%, var(--bg) 70%);
+    background-color: var(--bg);
+    font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    min-height: 100vh;
+    padding: 32px 0;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- 상단 제목 ---------- */
+  .page-head { width: var(--card-size); text-align: left; }
+  .page-head .eyebrow {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .2em;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .page-head h1 {
+    font-family: "Noto Serif KR", serif;
+    font-size: clamp(26px, 5vw, 38px);
+    font-weight: 900;
+    line-height: 1.25;
+    color: #fff;
+    margin-bottom: 6px;
+    word-break: keep-all;
+  }
+  .page-head .sub {
+    font-size: clamp(14px, 2.6vw, 16px);
+    line-height: 1.6;
+    color: rgba(255, 255, 255, .65);
+    word-break: keep-all;
+  }
+
+  /* ---------- 뷰어 ---------- */
+  .viewer {
+    width: var(--card-size);
+    height: var(--card-size);
+    position: relative;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .06);
+    touch-action: pan-y;
+    user-select: none;
+  }
+  .track {
+    display: flex;
+    height: 100%;
+    transition: transform .55s cubic-bezier(.65, 0, .25, 1);
+  }
+  .card {
+    flex: 0 0 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    padding: calc(var(--card-size) * .085);
+    display: flex;
+    flex-direction: column;
+    font-size: calc(var(--card-size) / 36);
+    background: var(--paper);
+  }
+
+  /* 공통 요소 */
+  .page-no {
+    position: absolute;
+    top: calc(var(--card-size) * .05);
+    right: calc(var(--card-size) * .06);
+    font-size: .8em;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--muted);
+  }
+  .brand {
+    position: absolute;
+    bottom: calc(var(--card-size) * .045);
+    left: calc(var(--card-size) * .085);
+    font-size: .72em;
+    font-weight: 500;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  .tag {
+    display: inline-block;
+    align-self: flex-start;
+    padding: .35em .9em;
+    border-radius: 99px;
+    background: var(--navy);
+    color: #fff;
+    font-size: .78em;
+    font-weight: 700;
+    letter-spacing: .08em;
+    margin-bottom: 1.1em;
+  }
+  h2 {
+    font-family: "Noto Serif KR", serif;
+    font-size: 2.15em;
+    line-height: 1.3;
+    font-weight: 900;
+    color: var(--navy);
+    margin-bottom: .7em;
+    word-break: keep-all;
+  }
+  h2 em { font-style: normal; color: var(--sky); }
+  .note {
+    margin-top: auto;
+    margin-bottom: 1.2em;
+    font-size: .72em;
+    color: var(--muted);
+    line-height: 1.6;
+    word-break: keep-all;
+  }
+
+  /* 등장 애니메이션 */
+  .card .rise { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
+  .card.active .rise { opacity: 1; transform: none; }
+  .card.active .rise:nth-child(2) { transition-delay: .08s; }
+  .card.active .rise:nth-child(3) { transition-delay: .16s; }
+  .card.active .rise:nth-child(4) { transition-delay: .24s; }
+  .card.active .rise:nth-child(5) { transition-delay: .32s; }
+  .card.active .rise:nth-child(6) { transition-delay: .40s; }
+  .card.active .rise:nth-child(7) { transition-delay: .48s; }
+
+  /* ---------- 2. 정의 · 교육목표 ---------- */
+  .define .quote {
+    border-left: 4px solid var(--gold);
+    padding: .3em 0 .3em 1em;
+    font-size: 1.05em;
+    line-height: 1.75;
+    word-break: keep-all;
+    margin-bottom: 1.4em;
+  }
+  .define .quote b { color: var(--navy); }
+  .goal-list { list-style: none; display: grid; gap: .7em; }
+  .goal-list li {
+    display: flex;
+    gap: 1em;
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: .9em 1.1em;
+    line-height: 1.55;
+    word-break: keep-all;
+  }
+  .goal-list .num {
+    flex: 0 0 auto;
+    font-family: "Noto Serif KR", serif;
+    font-weight: 900;
+    font-size: 1.4em;
+    color: var(--sky);
+    line-height: 1.1;
+  }
+  .goal-list b { display: block; color: var(--navy); margin-bottom: .15em; }
+  .goal-list span.d { color: var(--muted); font-size: .88em; }
+
+  /* ---------- 차례 ---------- */
+  .toc { background: var(--navy); color: #fff; }
+  .toc h2 { color: #fff; }
+  .toc h2 em { color: var(--gold); }
+  .toc .tag { background: var(--gold); color: var(--navy); }
+  .toc .page-no, .toc .brand, .toc .note { color: rgba(255,255,255,.55); }
+  .toc .list { display: grid; grid-template-columns: 1fr 1fr; gap: .6em; }
+  .toc .go {
+    display: flex;
+    align-items: center;
+    gap: .8em;
+    width: 100%;
+    padding: .85em 1em;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    font: inherit;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, transform .15s ease;
+  }
+  .toc .go:hover, .toc .go:focus-visible { background: var(--navy-2); border-color: var(--mint); color: #fff; transform: translateY(-2px); outline: none; }
+  .toc .go .n { font-family: "Noto Serif KR", serif; font-weight: 900; color: var(--sky); font-size: 1.1em; flex: 0 0 auto; }
+  .toc .go:hover .n, .toc .go:focus-visible .n { color: var(--gold); }
+  .toc .go .t { flex: 1; font-weight: 700; line-height: 1.35; word-break: keep-all; }
+  .toc .go .ar { color: var(--muted); font-weight: 900; }
+  .toc .go:hover .ar, .toc .go:focus-visible .ar { color: #fff; }
+
+  /* ---------- 3. 연혁 ---------- */
+  .history { background: linear-gradient(180deg, var(--paper) 0%, #eef5e2 100%); }
+  .years { position: relative; display: grid; gap: .55em; padding-left: 1.4em; flex: 1; align-content: space-between; margin-bottom: .8em; }
+  .years::before {
+    content: "";
+    position: absolute;
+    left: .35em; top: .5em; bottom: .5em;
+    width: 2px;
+    background: var(--line);
+  }
+  .yr-row { position: relative; display: grid; grid-template-columns: 3.4em 1fr; gap: .8em; align-items: baseline; line-height: 1.5; word-break: keep-all; }
+  .yr-row::before {
+    content: "";
+    position: absolute;
+    left: -1.35em; top: .45em;
+    width: .7em; height: .7em;
+    border-radius: 50%;
+    background: var(--sky);
+    box-shadow: 0 0 0 3px var(--paper);
+  }
+  .yr-row.key::before { background: var(--gold); }
+  .yr-row .y { font-family: "Noto Serif KR", serif; font-weight: 900; color: var(--navy); font-size: 1.05em; }
+  .yr-row .t { font-size: .95em; }
+
+  /* ---------- 4. 교수진 ---------- */
+  .prof .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7em; }
+  .prof .p {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: .95em 1.05em;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+  .prof .p .nm { font-weight: 900; color: var(--navy); font-size: 1.08em; }
+  .prof .p .role { font-size: .72em; font-weight: 700; color: var(--sky); margin-left: .4em; }
+  .prof .p .fld { display: block; font-size: .8em; color: var(--muted); margin-top: .3em; }
+
+  /* ---------- 5. 학년별 로드맵 ---------- */
+  .steps { position: relative; display: grid; gap: .75em; margin-top: .3em; flex: 1; align-content: space-between; margin-bottom: .8em; }
+  .steps::before {
+    content: "";
+    position: absolute;
+    left: 1.55em; top: 1em; bottom: 1em;
+    width: 2px;
+    background: var(--line);
+  }
+  .step { display: flex; gap: 1.1em; align-items: center; position: relative; }
+  .step .yr {
+    flex: 0 0 auto;
+    width: 3.1em; height: 3.1em;
+    border-radius: 50%;
+    background: var(--navy-2);
+    border: 2px solid var(--navy-2);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900;
+    font-size: .95em;
+  }
+  .step:last-child .yr { background: var(--gold); border-color: var(--gold); color: var(--navy); }
+  .step .txt { line-height: 1.5; word-break: keep-all; }
+  .step .txt b { display: block; font-size: 1.05em; color: var(--navy); }
+  .step .txt span { font-size: .82em; color: var(--muted); }
+
+  /* ---------- 6. 전공 영역 ---------- */
+  .subjects .tag { margin-bottom: .8em; }
+  .subjects h2 { font-size: 1.85em; margin-bottom: .55em; }
+  .subjects .grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5em; }
+  .subjects .box {
+    border-radius: 14px;
+    padding: .7em .95em;
+    background: #fff;
+    border-top: 5px solid var(--sky);
+    box-shadow: 0 2px 0 var(--line);
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+  .subjects .box:nth-child(3) { border-color: var(--mint); }
+  .subjects .box:nth-child(4) { border-color: var(--gold); }
+  .subjects .box:nth-child(5) { border-color: var(--navy); }
+  .subjects .box.base { grid-column: 1 / -1; border-top: none; border-left: 5px solid var(--muted); display: flex; gap: 1em; align-items: baseline; }
+  .subjects .box.base b { flex: 0 0 auto; margin-bottom: 0; }
+  .subjects .box b { display: block; color: var(--navy); margin-bottom: .15em; font-size: 1em; }
+  .subjects .box span { display: block; font-size: .72em; line-height: 1.5; color: var(--muted); }
+
+  /* ---------- 7. 자격증 ---------- */
+  .license { background: linear-gradient(170deg, #f6f6d8 0%, var(--paper) 60%); }
+  .cert { display: grid; gap: .8em; }
+  .cert .item {
+    display: flex;
+    align-items: center;
+    gap: 1.1em;
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.05em 1.2em;
+    border: 1px solid var(--line);
+  }
+  .cert .badge {
+    flex: 0 0 auto;
+    width: 3.4em; height: 3.4em;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900;
+    color: #fff;
+    font-size: .9em;
+    text-align: center;
+    line-height: 1.15;
+  }
+  .cert .item:nth-child(1) .badge { background: var(--navy); }
+  .cert .item:nth-child(2) .badge { background: var(--mint); color: var(--navy); }
+  .cert .item:nth-child(3) .badge { background: var(--gold); color: var(--navy); }
+  .cert .txt { line-height: 1.5; word-break: keep-all; }
+  .cert .txt b { display: block; color: var(--navy); font-size: 1.05em; }
+  .cert .txt span { font-size: .84em; color: var(--muted); }
+
+  /* ---------- 8. 진로 ---------- */
+  .career .map { display: grid; grid-template-columns: repeat(3, 1fr); gap: .65em; }
+  .career .place {
+    background: var(--navy);
+    border-radius: 14px;
+    border: 1px solid var(--navy);
+    padding: 1em .6em;
+    text-align: center;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
+  .career .place .em { font-size: 1.9em; display: block; margin-bottom: .2em; }
+  .career .place b { display: block; color: #fff; font-size: .95em; }
+  .career .place span { font-size: .74em; color: rgba(255,255,255,.7); }
+
+  /* ---------- 9. 학과 생활 ---------- */
+  .life .timeline { display: grid; gap: .65em; }
+  .life .row {
+    display: grid;
+    grid-template-columns: 4.2em 1fr;
+    gap: 1em;
+    align-items: center;
+    padding-bottom: .65em;
+    border-bottom: 1px dashed var(--line);
+  }
+  .life .row:last-child { border-bottom: none; }
+  .life .when {
+    font-weight: 900;
+    color: var(--sky);
+    font-size: .9em;
+    letter-spacing: .04em;
+  }
+  .life .what { line-height: 1.5; word-break: keep-all; }
+  .life .what b { color: var(--navy); }
+  .life .what span { display: block; font-size: .84em; color: var(--muted); }
+
+  /* ---------- 10. 마무리 ---------- */
+  .outro {
+    background: radial-gradient(circle at 15% 85%, rgba(113,191,67,.32) 0%, transparent 45%),
+                linear-gradient(200deg, var(--navy-2) 0%, var(--navy) 100%);
+    color: #fff;
+    justify-content: center;
+    text-align: center;
+    align-items: center;
+  }
+  .outro .page-no { color: rgba(255,255,255,.5); }
+  .outro .big {
+    font-family: "Noto Serif KR", serif;
+    font-size: 2.4em;
+    font-weight: 900;
+    line-height: 1.35;
+    margin-bottom: 1.1em;
+    word-break: keep-all;
+  }
+  .outro .big em { font-style: normal; color: var(--gold); }
+  .outro .contact {
+    width: 100%;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 16px;
+    padding: 1.1em 1.3em;
+    text-align: left;
+    display: grid;
+    gap: .5em;
+    font-size: .9em;
+    line-height: 1.5;
+    word-break: keep-all;
+  }
+  .outro .contact div { display: grid; grid-template-columns: 4.6em 1fr; gap: .6em; }
+  .outro .contact dt, .outro .contact .k { color: var(--gold); font-weight: 700; }
+  .outro .contact .v { color: rgba(255,255,255,.88); }
+  .outro .contact a.v { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255,255,255,.4); justify-self: start; }
+  .outro .contact a.v:hover { color: var(--gold); text-decoration-color: var(--gold); }
+  .outro .hash {
+    margin-top: 1.4em;
+    font-size: .82em;
+    color: rgba(255,255,255,.6);
+    word-spacing: .4em;
+  }
+
+  /* ---------- 컨트롤 ---------- */
+  .controls {
+    width: var(--card-size);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .nav-btn {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    color: var(--navy);
+    font-size: 20px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4);
+    transition: transform .15s ease, opacity .2s ease;
+    flex: 0 0 auto;
+  }
+  .nav-btn:hover:not(:disabled) { transform: scale(1.08); }
+  .nav-btn:disabled { opacity: .35; cursor: default; }
+  .dots { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
+  .dot {
+    width: 9px; height: 9px;
+    border-radius: 99px;
+    border: none;
+    background: rgba(255, 255, 255, .25);
+    cursor: pointer;
+    transition: width .3s ease, background .3s ease;
+    padding: 0;
+  }
+  .dot.on { width: 26px; background: var(--gold); }
+  .counter {
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, .7);
+    letter-spacing: .08em;
+  }
+  .home-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 20px;
+    border-radius: 99px;
+    border: 1px solid rgba(255, 255, 255, .25);
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease, color .2s ease, border-color .2s ease, opacity .2s ease;
+  }
+  .home-btn:hover:not(:disabled) { background: var(--gold); border-color: var(--gold); color: var(--navy); }
+  .home-btn:disabled { opacity: .35; cursor: default; }
+  .help { font-size: 12px; color: rgba(255, 255, 255, .45); }  .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+  /* ---------- PDF 저장(인쇄): 카드 1장 = 1페이지 ---------- */
+  @page { size: 160mm 160mm; margin: 0; }
+  @media print {
+    :root { --card-size: 160mm; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { display: block; min-height: 0; padding: 0; background: #fff; }
+    .page-head, .controls, .actions, .help { display: none; }
+    .viewer { width: auto; height: auto; overflow: visible; border-radius: 0; box-shadow: none; }
+    .track { display: block; height: auto; transform: none !important; transition: none; }
+    .card { width: var(--card-size); height: var(--card-size); break-after: page; }
+    .card:last-child { break-after: auto; }
+    .card .rise { opacity: 1; transform: none; transition: none; }
+  }
+
+  @media (max-width: 520px) {
+    .help { display: none; }
+    .nav-btn { width: 40px; height: 40px; font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <div class="eyebrow">SINCE 1981 · 사회과학대학</div>
+  <h1>대구대학교 문헌정보학과</h1>
+  <p class="sub">정보 과잉 시대, 필요한 정보를 정확히 찾고 연결하는 전문가</p>
+</header>
+
+<div class="viewer" id="viewer">
+  <div class="track" id="track">
+
+
+    <!-- 2. 문헌정보학 · 교육목표 -->
+    <section class="card define">
+      <div class="page-no">01 / 10</div>
+      <span class="tag rise">ABOUT US</span>
+      <h2 class="rise">문헌정보학,<br><em>어떤 학문</em>일까요?</h2>
+      <div class="quote rise">
+        정보 과잉 시대에 <b>필요한 정보를 정확히 찾고 연결</b>하는 학문.<br>
+        정보의 <b>수집·조직·활용</b>을 체계적으로 배우며<br>디지털 환경 변화에 능동적으로 대응합니다.
+      </div>
+      <ul class="goal-list">
+        <li class="rise"><span class="num">01</span><div><b>정보사회 전문가</b><span class="d">정보사회의 필수 소양과 전문기술 습득</span></div></li>
+        <li class="rise"><span class="num">02</span><div><b>유능한 전문사서</b><span class="d">도서관 및 정보센터 관련 이론 지식과 실무기법을 갖춘 인재</span></div></li>
+      </ul>
+      <div class="brand">대구대학교 문헌정보학과</div>
+    </section>
+
+    <!-- 차례 -->
+    <section class="card toc">
+      <div class="page-no">02 / 10</div>
+      <span class="tag rise">CONTENTS</span>
+      <h2 class="rise">궁금한 내용을<br><em>골라 보세요</em></h2>
+      <div class="list rise">
+        <button class="go" data-go="2"><span class="n">03</span><span class="t">연혁</span><span class="ar">›</span></button>
+        <button class="go" data-go="3"><span class="n">04</span><span class="t">교수진</span><span class="ar">›</span></button>
+        <button class="go" data-go="4"><span class="n">05</span><span class="t">학년별 로드맵</span><span class="ar">›</span></button>
+        <button class="go" data-go="5"><span class="n">06</span><span class="t">전공 영역별 과목</span><span class="ar">›</span></button>
+        <button class="go" data-go="6"><span class="n">07</span><span class="t">자격증</span><span class="ar">›</span></button>
+        <button class="go" data-go="7"><span class="n">08</span><span class="t">졸업 후 진로</span><span class="ar">›</span></button>
+        <button class="go" data-go="8"><span class="n">09</span><span class="t">학과 생활</span><span class="ar">›</span></button>
+        <button class="go" data-go="9"><span class="n">10</span><span class="t">연락처</span><span class="ar">›</span></button>
+      </div>
+      <div class="note">항목을 누르면 해당 카드로 바로 이동해요.</div>
+      <div class="brand">대구대학교 문헌정보학과</div>
+    </section>
+
+    <!-- 3. 연혁 -->
+    <section class="card history">
+      <div class="page-no">03 / 10</div>
+      <span class="tag rise">HISTORY</span>
+      <h2 class="rise">40년 넘게 이어온<br><em>문헌정보학의 길</em></h2>
+      <div class="years">
+        <div class="yr-row key rise"><span class="y">1981</span><span class="t">사회과학대학에 <b>도서관학과</b> 설치, 제1회 신입생 입학</span></div>
+        <div class="yr-row rise"><span class="y">1990</span><span class="t">학과명을 <b>문헌정보학과</b>로 개칭</span></div>
+        <div class="yr-row rise"><span class="y">1996</span><span class="t">일반대학원 <b>석사학위 과정</b> 신설</span></div>
+        <div class="yr-row rise"><span class="y">1999</span><span class="t">교육대학원 <b>사서교육 전공</b> 신설</span></div>
+        <div class="yr-row rise"><span class="y">2009</span><span class="t">문헌정보학과 <b>박사과정</b> 신설</span></div>
+        <div class="yr-row key rise"><span class="y">2011</span><span class="t">학과 개설 <b>30주년</b> 기념행사</span></div>
+      </div>
+      <div class="brand">대구대학교 문헌정보학과</div>
+    </section>
+
+    <!-- 4. 교수진 -->
+    <section class="card prof">
+      <div class="page-no">04 / 10</div>
+      <span class="tag rise">PROFESSORS</span>
+      <h2 class="rise">분야별 전문가가<br><em>함께합니다</em></h2>
+      <div class="grid">
+        <div class="p rise"><span class="nm">박광헌</span><span class="role">교수 · 학과장</span><span class="fld">학교도서관, 독서지도</span></div>
+        <div class="p rise"><span class="nm">김신영</span><span class="role">교수</span><span class="fld">정보서비스, 도서관경영</span></div>
+        <div class="p rise"><span class="nm">최예진</span><span class="role">교수</span><span class="fld">자료조직, 학술커뮤니케이션</span></div>
+        <div class="p rise"><span class="nm">장보성</span><span class="role">교수</span><span class="fld">정보학, 정보시스템개발, 정보검색, 데이터베이스</span></div>
+      </div>
+      <div class="note">명예교수 윤희윤(도서관경영·정책, 자료분류) · 겸임교수 곽병일(정보이용형태론, 이용자서비스)</div>
+      <div class="brand">대구대학교 문헌정보학과</div>
+    </section>
+
+    <!-- 5. 학년별 로드맵 -->
+    <section class="card roadmap">
+      <div class="page-no">05 / 10</div>
+      <span class="tag rise">ROADMAP</span>
+      <h2 class="rise">4년 동안<br><em>이렇게</em> 배워요</h2>
+      <div class="steps">
+        <div class="step rise"><div class="yr">1학년</div><div class="txt"><b>기초 다지기</b><span>문헌정보학이해, 도서관문화사, 장서관리론, 지능정보사회와정보활용</span></div></div>
+        <div class="step rise"><div class="yr">2학년</div><div class="txt"><b>전공 핵심</b><span>정보학개론, 목록법이해, 자료분류론, 정보서비스론, 독서지도</span></div></div>
+        <div class="step rise"><div class="yr">3학년</div><div class="txt"><b>도서관 운영 · 정보검색</b><span>대학도서관경영, 학교도서관운영, 자동화목록법, 정보검색이해</span></div></div>
+        <div class="step rise"><div class="yr">4학년</div><div class="txt"><b>실무 · 심화</b><span>도서관실무실습, 기록학개론, 메타데이터, 지식정보큐레이션</span></div></div>
+      </div>
+      <div class="brand">대구대학교 문헌정보학과</div>
+    </section>
+
+    <!-- 6. 전공 영역 -->
+    <section class="card subjects">
+      <div class="page-no">06 / 10</div>
+      <span class="tag rise">CURRICULUM</span>
+      <h2 class="rise">무엇을 배우나요?<br><em>전공 영역별 과목</em></h2>
+      <div class="grid">
+        <div class="box base rise"><b>🧭 기초 · 이론</b><span>문헌정보학이해, 도서관문화사, 디지털시민사회이야기, 기록학개론</span></div>
+        <div class="box rise"><b>📚 자료조직</b><span>장서관리론, 목록법이해, 자료분류론, 자료분류특강, 자동화목록법, 메타데이터</span></div>
+        <div class="box rise"><b>🙋 정보서비스</b><span>정보서비스론, 이용자교육론, 정보이용형태, 독서지도, 어린이서비스, 취약계층서비스, 도서관프로그램운영, 지식정보큐레이션</span></div>
+        <div class="box rise"><b>🏛️ 도서관 경영</b><span>공공도서관경영, 대학도서관경영, 학교도서관운영, 도서관마케팅, 도서관정보정책, 도서관실무실습</span></div>
+        <div class="box rise"><b>💻 정보학 · 데이터</b><span>정보학개론, 데이터베이스이해, 정보검색이해, 정보시스템개발, 계량정보학, 전자출판론</span></div>
+      </div>
+      <div class="note">* 파이썬프로그래밍, 저작권법, 문화콘텐츠입문 등 교차설강 과목도 들을 수 있어요.</div>
+      <div class="brand">대구대학교 문헌정보학과</div>
+    </section>
+
+    <!-- 7. 자격증 -->
+    <section class="card license">
+      <div class="page-no">07 / 10</div>
+      <span class="tag rise">LICENSE</span>
+      <h2 class="rise">졸업과 함께<br><em>전문 자격</em>을 손에!</h2>
+      <div class="cert">
+        <div class="item rise"><div class="badge">2급<br>정사서</div><div class="txt"><b>2급 정사서</b><span>문헌정보학을 전공하고 졸업하면 취득</span></div></div>
+        <div class="item rise"><div class="badge">사서<br>교사</div><div class="txt"><b>사서교사 자격증</b><span>재학 중 교직이수 시 취득 (정원의 10% 선발)</span></div></div>
+        <div class="item rise"><div class="badge">1급<br>정사서</div><div class="txt"><b>1급 정사서</b><span>문헌정보학 박사학위 취득 또는 2급 정사서 + 석사학위 + 경력 6년 이상</span></div></div>
+      </div>
+      <div class="note">* 학과 대학원(석·박사)과 교육대학원 사서교육 전공에서 더 깊이 공부할 수 있어요.</div>
+      <div class="brand">대구대학교 문헌정보학과</div>
+    </section>
+
+    <!-- 8. 진로 -->
+    <section class="card career">
+      <div class="page-no">08 / 10</div>
+      <span class="tag rise">CAREER</span>
+      <h2 class="rise">졸업 후에는<br><em>어디로</em> 갈까요?</h2>
+      <div class="map rise">
+        <div class="place"><span class="em">🏛️</span><b>공공도서관</b><span>지역 주민을 위한 사서</span></div>
+        <div class="place"><span class="em">🎓</span><b>대학도서관</b><span>학술정보 서비스</span></div>
+        <div class="place"><span class="em">🏫</span><b>학교도서관</b><span>사서교사</span></div>
+        <div class="place"><span class="em">📰</span><b>언론사</b><span>자료·정보 관리</span></div>
+        <div class="place"><span class="em">🔬</span><b>연구기관</b><span>연구정보 전문가</span></div>
+        <div class="place"><span class="em">📊</span><b>IT · 데이터 기업</b><span>정보·데이터 관리</span></div>
+      </div>
+      <div class="note">학과 홈페이지 ‘취업정보’ 게시판과 졸업생 취업성공 특강으로 진로 준비를 도와요.</div>
+      <div class="brand">대구대학교 문헌정보학과</div>
+    </section>
+
+    <!-- 9. 학과 생활 -->
+    <section class="card life">
+      <div class="page-no">09 / 10</div>
+      <span class="tag rise">CAMPUS LIFE</span>
+      <h2 class="rise">강의실 밖에서도<br><em>함께 성장해요</em></h2>
+      <div class="timeline">
+        <div class="row rise"><div class="when">동아리</div><div class="what"><b>관심사별로 골라 하는 동아리</b><span>다빈(도서관 봉사) · 생각하는 돈키호테(토론) · L.S.G(취업 스터디) · 셈사랑(컴퓨터) · 리더(웹콘텐츠 토론)</span></div></div>
+        <div class="row rise"><div class="when">실습</div><div class="what"><b>도서관실무실습</b><span>4학년 1학기, 현장에서 사서 업무를 직접 경험</span></div></div>
+        <div class="row rise"><div class="when">견학</div><div class="what"><b>문정기행</b><span>국립중앙도서관, 대구대표도서관 등 여러 도서관 견학 프로그램</span></div></div>
+        <div class="row rise"><div class="when">특강</div><div class="what"><b>AI 시대 특강 · 졸업생 취업성공 특강</b><span>변화하는 정보 환경과 선배들의 취업 노하우</span></div></div>
+        <div class="row rise"><div class="when">학생회</div><div class="what"><b>제46대 ‘새봄’ 학생회</b><span>“다름을 품고, 함께 피어나는”</span></div></div>
+      </div>
+      <div class="brand">대구대학교 문헌정보학과</div>
+    </section>
+
+    <!-- 10. 마무리 · 연락처 -->
+    <section class="card outro">
+      <div class="page-no">10 / 10</div>
+      <div class="big rise">정보와 사람을 잇는 길,<br><em>대구대 문헌정보학과</em>에서<br>시작하세요</div>
+      <div class="contact rise">
+        <div><span class="k">위치</span><span class="v">경북 경산시 진량읍 대구대로 201<br>대구대학교 사회과학대학</span></div>
+        <div><span class="k">전화</span><span class="v">053-850-6350</span></div>
+        <div><span class="k">홈페이지</span><a class="v" href="https://lis.daegu.ac.kr/main" target="_blank" rel="noopener">lis.daegu.ac.kr ↗</a></div>
+        <div><span class="k">인스타그램</span><a class="v" href="https://www.instagram.com/daegu_univ_lis" target="_blank" rel="noopener">@daegu_univ_lis ↗</a></div>
+      </div>
+      <div class="hash rise">#대구대학교 #문헌정보학과 #사서 #정보전문가</div>
+    </section>
+
+  </div>
+</div>
+
+<div class="controls">
+  <button class="nav-btn" id="prev" aria-label="이전 카드">‹</button>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+    <div class="dots" id="dots"></div>
+    <div class="counter" id="counter">1 / 10</div>
+  </div>
+  <button class="nav-btn" id="next" aria-label="다음 카드">›</button>
+</div>
+<div class="actions">
+  <button class="home-btn" id="home" aria-label="첫 번째 카드로 이동">⟲ 처음으로</button>
+  <button class="home-btn" id="pdf" aria-label="카드뉴스를 PDF로 저장">⤓ PDF로 저장</button>
+</div>
+<div class="help">← → 방향키, 마우스 드래그, 스와이프로 넘길 수 있어요</div>
+
+<script>
+  (function () {
+    const track = document.getElementById('track');
+    const viewer = document.getElementById('viewer');
+    const cards = Array.from(track.children);
+    const dotsWrap = document.getElementById('dots');
+    const counter = document.getElementById('counter');
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+    const homeBtn = document.getElementById('home');
+    const total = cards.length;
+    let index = 0;
+
+    cards.forEach((_, i) => {
+      const d = document.createElement('button');
+      d.className = 'dot';
+      d.setAttribute('aria-label', (i + 1) + '번 카드로 이동');
+      d.addEventListener('click', () => go(i));
+      dotsWrap.appendChild(d);
+    });
+    const dots = Array.from(dotsWrap.children);
+
+    function go(i) {
+      index = Math.max(0, Math.min(total - 1, i));
+      track.style.transition = '';
+      track.style.transform = 'translateX(' + (-index * 100) + '%)';
+      cards.forEach((c, k) => c.classList.toggle('active', k === index));
+      dots.forEach((d, k) => d.classList.toggle('on', k === index));
+      counter.textContent = (index + 1) + ' / ' + total;
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === total - 1;
+      homeBtn.disabled = index === 0;
+    }
+
+    track.querySelectorAll('[data-go]').forEach((b) => {
+      b.addEventListener('click', () => go(Number(b.dataset.go)));
+    });
+
+    homeBtn.addEventListener('click', () => go(0));
+    document.getElementById('pdf').addEventListener('click', () => window.print());
+    prevBtn.addEventListener('click', () => go(index - 1));
+    nextBtn.addEventListener('click', () => go(index + 1));
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === ' ' || e.key === 'Enter') && e.target.closest('button, a')) return;
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(index + 1); }
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(index - 1); }
+      if (e.key === 'Home') go(0);
+      if (e.key === 'End') go(total - 1);
+    });
+
+    // 드래그 / 스와이프
+    let startX = 0, dx = 0, dragging = false;
+    viewer.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button, a')) return;
+      dragging = true; startX = e.clientX; dx = 0;
+      track.style.transition = 'none';
+      viewer.setPointerCapture(e.pointerId);
+    });
+    viewer.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      dx = e.clientX - startX;
+      track.style.transform = 'translateX(calc(' + (-index * 100) + '% + ' + dx + 'px))';
+    });
+    function endDrag() {
+      if (!dragging) return;
+      dragging = false;
+      const threshold = viewer.clientWidth * 0.18;
+      if (dx < -threshold) go(index + 1);
+      else if (dx > threshold) go(index - 1);
+      else go(index);
+    }
+    viewer.addEventListener('pointerup', endDrag);
+    viewer.addEventListener('pointercancel', endDrag);
+
+    go(0);
+  })();
+</script>
+</body>
+</html>
